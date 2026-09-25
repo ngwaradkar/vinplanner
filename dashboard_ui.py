@@ -83,6 +83,7 @@ THEME_TOKENS = {
         'bg_secondary': '#0C1118',
         'bg_surface': '#111823',
         'bg_elevated': '#17202C',
+        'bg_elev': '#17202C',
         'border': 'rgba(255, 255, 255, 0.08)',
         'border_strong': 'rgba(255, 255, 255, 0.14)',
         'text_primary': '#F8FAFC',
@@ -115,6 +116,7 @@ THEME_TOKENS = {
         'bg_secondary': '#EBF1F8',
         'bg_surface': '#FFFFFF',
         'bg_elevated': '#F8FAFC',
+        'bg_elev': '#F8FAFC',
         'border': '#DCE3EC',
         'border_strong': '#CBD5E1',
         'text_primary': '#172033',
@@ -967,9 +969,9 @@ def render_kpi_card(label: str, value: str, subtext: str = None, status: str = '
         'critical': (tokens['critical'], tokens['critical_bg']),
         'shortage': (tokens['critical'], tokens['critical_bg']),
         'info': (tokens['cyan'], tokens['tcf1_bg']),
-        'neutral': (tokens['text_muted'], tokens['bg_elev']),
+        'neutral': (tokens['text_muted'], tokens.get('bg_elevated', tokens.get('bg_elev', '#17202C'))),
     }
-    st_color, st_bg = status_map.get(status.lower(), (tokens['text_muted'], tokens['bg_elev']))
+    st_color, st_bg = status_map.get(status.lower(), (tokens['text_muted'], tokens.get('bg_elevated', tokens.get('bg_elev', '#17202C'))))
     line_cls = f" {line.lower()}" if line else ""
 
     badge_html = ""
