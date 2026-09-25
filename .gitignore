@@ -1,3 +1,8 @@
+# Data files (users upload via UI)
+*.xlsx
+*.xlsb
+*.xls
+
 # Virtual environment
 .venv/
 venv/
