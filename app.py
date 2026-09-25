@@ -723,14 +723,14 @@ if page == 'Control Panel':
                             st.toast(f"✅ Loaded {category.replace('_',' ').replace('COCKPIT', 'COCKPIT WH')}: {uploaded_file.name}", icon="✅")
                             replaced_any = True
             
-                # Record that we processed these files
-                st.session_state.last_processed_upload_ids = uploaded_ids
-                if replaced_any:
-                    st.session_state.pop('_file_registry', None)
-                    detected_files = ui.file_registry(active_dir, dl.detect_and_classify_files)
-                    ui.invalidate_report()
-                    st.session_state.run_report = False
-                    st.rerun()
+                    # Record and refresh only after processing a new upload batch.
+                    st.session_state.last_processed_upload_ids = uploaded_ids
+                    if replaced_any:
+                        st.session_state.pop('_file_registry', None)
+                        detected_files = ui.file_registry(active_dir, dl.detect_and_classify_files)
+                        ui.invalidate_report()
+                        st.session_state.run_report = False
+                        st.rerun()
 
         with st.container(border=True):
                 col_stat_title, col_stat_dl = st.columns([1.3, 1.0])
