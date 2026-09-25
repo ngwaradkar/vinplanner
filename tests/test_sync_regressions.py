@@ -1,6 +1,6 @@
 import ast, datetime, types, json
 from pathlib import Path
-APP=(Path(__file__).resolve().parents[1] / 'app.py').read_text()
+APP=(Path(__file__).resolve().parents[1] / 'app.py').read_text(encoding='utf-8')
 class State(dict):
  def __getattr__(self,k):
   try:return self[k]
