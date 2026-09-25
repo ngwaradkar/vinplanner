@@ -1058,17 +1058,19 @@ def file_status_row(name, source, available):
         label = "PENDING UPLOAD"
         dot = "red"
 
-    return f"""
-    <div style="display:flex; align-items:center; justify-content:space-between; padding:0.65rem 0.5rem; border-bottom:1px solid {tokens['border']};">
-        <div>
-            <div style="font-size:0.86rem; font-weight:650; color:{tokens['text_primary']};">{html.escape(name)}</div>
-            <div style="font-size:0.75rem; color:{tokens['text_muted']}; margin-top:0.15rem;">Source: {html.escape(str(source))}</div>
-        </div>
-        <span style="font-size:0.72rem; font-weight:700; padding:3px 8px; border-radius:4px; background:{bg}; color:{fg}; border:1px solid {fg}30; white-space:nowrap;">
-            <span class="tml-dot {dot}" style="margin-right:4px;"></span>{label}
-        </span>
-    </div>
-    """
+    # Keep joined rows free of template whitespace: Markdown treats indented
+    # HTML after a blank line as a code block, even with unsafe_allow_html=True.
+    return (
+        f'<div style="display:flex; align-items:center; justify-content:space-between; padding:0.65rem 0.5rem; border-bottom:1px solid {tokens["border"]};">'
+        '<div>'
+        f'<div style="font-size:0.86rem; font-weight:650; color:{tokens["text_primary"]};">{html.escape(name)}</div>'
+        f'<div style="font-size:0.75rem; color:{tokens["text_muted"]}; margin-top:0.15rem;">Source: {html.escape(str(source))}</div>'
+        '</div>'
+        f'<span style="font-size:0.72rem; font-weight:700; padding:3px 8px; border-radius:4px; background:{bg}; color:{fg}; border:1px solid {fg}30; white-space:nowrap;">'
+        f'<span class="tml-dot {dot}" style="margin-right:4px;"></span>{label}'
+        '</span>'
+        '</div>'
+    )
 
 
 def show_data_health(sources):
