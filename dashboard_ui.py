@@ -928,30 +928,30 @@ def render_enterprise_header(is_dark: bool = True):
     auto_label = "AUTO-SYNC ON" if auto_sync else "AUTO-SYNC OFF"
     auto_dot = "blue" if auto_sync else "amber"
 
-    header_html = f"""
-    <div class="tml-header">
-        <div class="tml-header-left">
-            <span class="tml-brand-badge">TML</span>
-            <div>
-                <div class="tml-header-title">SMART PPC OPERATIONS CONTROL CENTER</div>
-                <div class="tml-header-subtitle">VIN • FLOAT • SHORTAGE • CLEARANCE • PRODUCTION</div>
-            </div>
-        </div>
-        <div class="tml-header-right">
-            <div class="tml-pill">
-                <span class="tml-dot {sync_dot}"></span>
-                <span>{sync_label}</span>
-            </div>
-            <div class="tml-pill">
-                <span class="tml-dot {auto_dot}"></span>
-                <span>{auto_label}</span>
-            </div>
-            <div class="tml-pill">
-                <span>🕒 {time_str}</span>
-            </div>
-        </div>
-    </div>
-    """
+    header_html = (
+        f'<div class="tml-header">'
+        f'<div class="tml-header-left">'
+        f'<span class="tml-brand-badge">TML</span>'
+        f'<div>'
+        f'<div class="tml-header-title">SMART PPC OPERATIONS CONTROL CENTER</div>'
+        f'<div class="tml-header-subtitle">VIN • FLOAT • SHORTAGE • CLEARANCE • PRODUCTION</div>'
+        f'</div>'
+        f'</div>'
+        f'<div class="tml-header-right">'
+        f'<div class="tml-pill">'
+        f'<span class="tml-dot {sync_dot}"></span>'
+        f'<span>{sync_label}</span>'
+        f'</div>'
+        f'<div class="tml-pill">'
+        f'<span class="tml-dot {auto_dot}"></span>'
+        f'<span>{auto_label}</span>'
+        f'</div>'
+        f'<div class="tml-pill">'
+        f'<span>🕒 {time_str}</span>'
+        f'</div>'
+        f'</div>'
+        f'</div>'
+    )
     st.markdown(header_html, unsafe_allow_html=True)
 
 
@@ -974,22 +974,19 @@ def render_kpi_card(label: str, value: str, subtext: str = None, status: str = '
     st_color, st_bg = status_map.get(status.lower(), (tokens['text_muted'], tokens.get('bg_elevated', tokens.get('bg_elev', '#17202C'))))
     line_cls = f" {line.lower()}" if line else ""
 
-    badge_html = ""
-    if status_label:
-        badge_html = f'<span class="tml-kpi-badge" style="color:{st_color}; background:{st_bg}; border:1px solid {st_color}40;">{status_label}</span>'
-
+    badge_html = f'<span class="tml-kpi-badge" style="color:{st_color}; background:{st_bg}; border:1px solid {st_color}40;">{status_label}</span>' if status_label else ""
     sub_html = f'<div class="tml-kpi-subtext">{subtext}</div>' if subtext else ""
 
-    return f"""
-    <div class="tml-kpi-card{line_cls}">
-        <div class="tml-kpi-top">
-            <span class="tml-kpi-label">{label}</span>
-            {badge_html}
-        </div>
-        <div class="tml-kpi-value">{value}</div>
-        {sub_html}
-    </div>
-    """
+    return (
+        f'<div class="tml-kpi-card{line_cls}">'
+        f'<div class="tml-kpi-top">'
+        f'<span class="tml-kpi-label">{label}</span>'
+        f'{badge_html}'
+        f'</div>'
+        f'<div class="tml-kpi-value">{value}</div>'
+        f'{sub_html}'
+        f'</div>'
+    )
 
 
 def render_alert_strip(title: str, subtitle: str = None, severity: str = 'critical', is_dark: bool = True):
@@ -1006,14 +1003,14 @@ def render_alert_strip(title: str, subtitle: str = None, severity: str = 'critic
     icon = icon_map.get(sev_class, '🔴')
     sub_html = f'<div class="tml-alert-desc">{subtitle}</div>' if subtitle else ""
 
-    return f"""
-    <div class="tml-alert-strip {sev_class}">
-        <div class="tml-alert-header">
-            <div class="tml-alert-title">{icon} {title}</div>
-        </div>
-        {sub_html}
-    </div>
-    """
+    return (
+        f'<div class="tml-alert-strip {sev_class}">'
+        f'<div class="tml-alert-header">'
+        f'<div class="tml-alert-title">{icon} {title}</div>'
+        f'</div>'
+        f'{sub_html}'
+        f'</div>'
+    )
 
 
 def render_section_header(title: str, subtitle: str = None, badge: str = None,
@@ -1030,21 +1027,19 @@ def render_section_header(title: str, subtitle: str = None, badge: str = None,
     }
     b_col, b_bg = badge_colors.get(badge_type, (tokens['blue'], tokens['tcf1_bg']))
 
-    badge_html = ""
-    if badge:
-        badge_html = f'<span style="font-size:0.7rem; font-weight:700; padding:2px 8px; border-radius:4px; border:1px solid {b_col}; color:{b_col}; background:{b_bg};">{badge}</span>'
-
+    badge_html = f'<span style="font-size:0.7rem; font-weight:700; padding:2px 8px; border-radius:4px; border:1px solid {b_col}; color:{b_col}; background:{b_bg};">{badge}</span>' if badge else ""
     sub_html = f'<div class="tml-section-sub">{subtitle}</div>' if subtitle else ""
 
-    st.markdown(f"""
-    <div class="tml-section-bar">
-        <div>
-            <div class="tml-section-title">{title}</div>
-            {sub_html}
-        </div>
-        {badge_html}
-    </div>
-    """, unsafe_allow_html=True)
+    section_html = (
+        f'<div class="tml-section-bar">'
+        f'<div>'
+        f'<div class="tml-section-title">{title}</div>'
+        f'{sub_html}'
+        f'</div>'
+        f'{badge_html}'
+        f'</div>'
+    )
+    st.markdown(section_html, unsafe_allow_html=True)
 
 
 def file_status_row(name, source, available):
