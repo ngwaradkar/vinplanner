@@ -680,9 +680,9 @@ if page == 'Control Panel':
                 if not uploaded_files:
                     st.session_state.last_processed_upload_ids = []
             
+                replaced_any = False
                 if uploaded_files and uploaded_ids != last_processed_ids:
                     uploaded_mappings = dl.classify_files(uploaded_files)
-                    replaced_any = False
                     upload_ts = format_ist_now("%d-%m-%Y %I:%M %p")
                     for category, uploaded_file in uploaded_mappings.items():
                         mem_buf = io.BytesIO(uploaded_file.getvalue())
@@ -723,14 +723,14 @@ if page == 'Control Panel':
                             st.toast(f"✅ Loaded {category.replace('_',' ').replace('COCKPIT', 'COCKPIT WH')}: {uploaded_file.name}", icon="✅")
                             replaced_any = True
             
-                    # Record and refresh only after processing a new upload batch.
-                    st.session_state.last_processed_upload_ids = uploaded_ids
-                    if replaced_any:
-                        st.session_state.pop('_file_registry', None)
-                        detected_files = ui.file_registry(active_dir, dl.detect_and_classify_files)
-                        ui.invalidate_report()
-                        st.session_state.run_report = False
-                        st.rerun()
+                # Record that we processed these files
+                st.session_state.last_processed_upload_ids = uploaded_ids
+                if replaced_any:
+                    st.session_state.pop('_file_registry', None)
+                    detected_files = ui.file_registry(active_dir, dl.detect_and_classify_files)
+                    ui.invalidate_report()
+                    st.session_state.run_report = False
+                    st.rerun()
 
         with st.container(border=True):
                 col_stat_title, col_stat_dl = st.columns([1.3, 1.0])
