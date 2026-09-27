@@ -2289,14 +2289,11 @@ def _calculate_summary():
     return locals()
 
 
-if page in ('Summary & Excel Reports', 'Cockpit & Wiring Shortages'):
+if page == 'Summary & Excel Reports':
     if '_summary_snapshot' not in st.session_state:
         st.session_state['_summary_snapshot'] = _calculate_summary()
     globals().update(st.session_state['_summary_snapshot'])
     is_dark_theme = st.session_state.theme == '🌙 Dark Theme'
-
-if page == 'Overview':
-    ui.overview(st.session_state['_report_snapshot'], loaded_data)
 
 if page == 'Telegram Dispatcher' or st.session_state.get('telegram_auto_send_15m', False):
     tg_report_1_text, tg_report_2_text, tg_report_3_text = _build_telegram_reports()
@@ -3185,12 +3182,17 @@ if page == 'Summary & Excel Reports':
         is_dark=is_dark_theme
     )
 
-    tab_matrix, tab_float, tab_reqs, tab_hourly = st.tabs([
+    tab_overview, tab_matrix, tab_float, tab_reqs, tab_hourly, tab_shortages = st.tabs([
+        "🏢 Plant Overview",
         "📊 Plant Production & Model Matrix",
         "🎨 Paint Shop Float Summary",
         "⚙️ Engine & Battery Requirements",
-        "⏱️ Hourly Production Tracker"
+        "⏱️ Hourly Production Tracker",
+        "🧩 Cockpit & Wiring Shortages"
     ])
+
+    with tab_overview:
+        ui.overview(st.session_state['_report_snapshot'], loaded_data)
 
     with tab_matrix:
         # --- SECTION 0: SHOP-WISE PLANT PRODUCTION SUMMARY ---
@@ -4044,160 +4046,160 @@ if page == 'Summary & Excel Reports':
             st.info("Please load Paint Float data in the Control Panel to view the engine & battery requirements.")
 
 
-# ----------------- TAB 2: COCKPIT & WIRING SHORTAGE REPORTS -----------------
-if page == 'Cockpit & Wiring Shortages':
-    ui.render_section_header(
-        "Cockpit WH & Front Wiring Shortage Reports",
-        "Real-time shortage monitoring for Cockpit WH Assemblies and Front Wiring Harnesses matching engine summary models",
-        badge="MATERIAL CLEARANCE",
-        is_dark=is_dark_theme
-    )
+    # ----------------- COCKPIT & WIRING SHORTAGE REPORTS (tab) -----------------
+    with tab_shortages:
+        ui.render_section_header(
+            "Cockpit WH & Front Wiring Shortage Reports",
+            "Real-time shortage monitoring for Cockpit WH Assemblies and Front Wiring Harnesses matching engine summary models",
+            badge="MATERIAL CLEARANCE",
+            is_dark=is_dark_theme
+        )
 
-    cpt_sh_df = df_cpt_shortage if 'df_cpt_shortage' in locals() and df_cpt_shortage is not None else pd.DataFrame()
-    wir_sh_df = df_wir_shortage if 'df_wir_shortage' in locals() and df_wir_shortage is not None else pd.DataFrame()
-    cpt_all_df = df_cpt_all if 'df_cpt_all' in locals() and df_cpt_all is not None else pd.DataFrame()
-    wir_all_df = df_wir_all if 'df_wir_all' in locals() and df_wir_all is not None else pd.DataFrame()
+        cpt_sh_df = df_cpt_shortage if 'df_cpt_shortage' in locals() and df_cpt_shortage is not None else pd.DataFrame()
+        wir_sh_df = df_wir_shortage if 'df_wir_shortage' in locals() and df_wir_shortage is not None else pd.DataFrame()
+        cpt_all_df = df_cpt_all if 'df_cpt_all' in locals() and df_cpt_all is not None else pd.DataFrame()
+        wir_all_df = df_wir_all if 'df_wir_all' in locals() and df_wir_all is not None else pd.DataFrame()
 
-    if (cpt_all_df is None or cpt_all_df.empty) and (wir_all_df is None or wir_all_df.empty):
-        st.info("ℹ️ Please load Paint Float and BOM data in the Control Panel to view Cockpit WH & Wiring Shortage Reports.")
-    else:
-        # Top KPI Summary Cards
-        cpt_sh_count = len(cpt_sh_df) if cpt_sh_df is not None else 0
-        wir_sh_count = len(wir_sh_df) if wir_sh_df is not None else 0
-        tot_cpt_count = len(cpt_all_df) if cpt_all_df is not None else 0
-        tot_wir_count = len(wir_all_df) if wir_all_df is not None else 0
+        if (cpt_all_df is None or cpt_all_df.empty) and (wir_all_df is None or wir_all_df.empty):
+            st.info("ℹ️ Please load Paint Float and BOM data in the Control Panel to view Cockpit WH & Wiring Shortage Reports.")
+        else:
+            # Top KPI Summary Cards
+            cpt_sh_count = len(cpt_sh_df) if cpt_sh_df is not None else 0
+            wir_sh_count = len(wir_sh_df) if wir_sh_df is not None else 0
+            tot_cpt_count = len(cpt_all_df) if cpt_all_df is not None else 0
+            tot_wir_count = len(wir_all_df) if wir_all_df is not None else 0
 
-        k1, k2, k3, k4 = st.columns(4)
-        with k1:
-            st.markdown(ui.render_kpi_card("Cockpit WH Shortages", f"{cpt_sh_count} Part{'s' if cpt_sh_count != 1 else ''}", "Critical assembly shortage" if cpt_sh_count > 0 else "All covered", status="critical" if cpt_sh_count > 0 else "healthy", status_label="● SHORTAGE" if cpt_sh_count > 0 else "● OK", is_dark=is_dark_theme), unsafe_allow_html=True)
-        with k2:
-            st.markdown(ui.render_kpi_card("Wiring Shortages", f"{wir_sh_count} Part{'s' if wir_sh_count != 1 else ''}", "Critical wiring shortage" if wir_sh_count > 0 else "All covered", status="critical" if wir_sh_count > 0 else "healthy", status_label="● SHORTAGE" if wir_sh_count > 0 else "● OK", is_dark=is_dark_theme), unsafe_allow_html=True)
-        with k3:
-            st.markdown(ui.render_kpi_card("Monitored Cockpit WH", f"{tot_cpt_count} Parts", "Active cockpit part numbers", status="neutral", is_dark=is_dark_theme), unsafe_allow_html=True)
-        with k4:
-            st.markdown(ui.render_kpi_card("Monitored Wiring", f"{tot_wir_count} Parts", "Active front wiring part numbers", status="neutral", is_dark=is_dark_theme), unsafe_allow_html=True)
+            k1, k2, k3, k4 = st.columns(4)
+            with k1:
+                st.markdown(ui.render_kpi_card("Cockpit WH Shortages", f"{cpt_sh_count} Part{'s' if cpt_sh_count != 1 else ''}", "Critical assembly shortage" if cpt_sh_count > 0 else "All covered", status="critical" if cpt_sh_count > 0 else "healthy", status_label="● SHORTAGE" if cpt_sh_count > 0 else "● OK", is_dark=is_dark_theme), unsafe_allow_html=True)
+            with k2:
+                st.markdown(ui.render_kpi_card("Wiring Shortages", f"{wir_sh_count} Part{'s' if wir_sh_count != 1 else ''}", "Critical wiring shortage" if wir_sh_count > 0 else "All covered", status="critical" if wir_sh_count > 0 else "healthy", status_label="● SHORTAGE" if wir_sh_count > 0 else "● OK", is_dark=is_dark_theme), unsafe_allow_html=True)
+            with k3:
+                st.markdown(ui.render_kpi_card("Monitored Cockpit WH", f"{tot_cpt_count} Parts", "Active cockpit part numbers", status="neutral", is_dark=is_dark_theme), unsafe_allow_html=True)
+            with k4:
+                st.markdown(ui.render_kpi_card("Monitored Wiring", f"{tot_wir_count} Parts", "Active front wiring part numbers", status="neutral", is_dark=is_dark_theme), unsafe_allow_html=True)
 
-        # Excess Alert Banner (if any)
-        if 'excess_alerts' in locals() and excess_alerts:
-            header_title = f"🚨 ALERT: TODAY VIN GENERATION EXCEEDS CLEARANCE AFTER 6:30 AM ({len(excess_alerts)} Item{'s' if len(excess_alerts) > 1 else ''})"
-            bg_card = '#2C121A' if is_dark_theme else '#FFF1F2'
-            title_color = '#FDA4AF' if is_dark_theme else '#9F1239'
-            sub_color = '#94A3B8' if is_dark_theme else '#64748B'
-            text_col = '#FAFAFA' if is_dark_theme else '#111827'
-            th_bg = '#4C1D24' if is_dark_theme else '#FFE4E6'
-            border_hdr = '#881337' if is_dark_theme else '#FECDD3'
-            border_td = '#5F1D28' if is_dark_theme else '#FFE4E6'
-            cat_col = '#FB7185' if is_dark_theme else '#E11D48'
-            vin_col = '#F43F5E' if is_dark_theme else '#BE123C'
-            exc_bg = '#881337' if is_dark_theme else '#FECDD3'
-            exc_col = '#FFF' if is_dark_theme else '#9F1239'
+            # Excess Alert Banner (if any)
+            if 'excess_alerts' in locals() and excess_alerts:
+                header_title = f"🚨 ALERT: TODAY VIN GENERATION EXCEEDS CLEARANCE AFTER 6:30 AM ({len(excess_alerts)} Item{'s' if len(excess_alerts) > 1 else ''})"
+                bg_card = '#2C121A' if is_dark_theme else '#FFF1F2'
+                title_color = '#FDA4AF' if is_dark_theme else '#9F1239'
+                sub_color = '#94A3B8' if is_dark_theme else '#64748B'
+                text_col = '#FAFAFA' if is_dark_theme else '#111827'
+                th_bg = '#4C1D24' if is_dark_theme else '#FFE4E6'
+                border_hdr = '#881337' if is_dark_theme else '#FECDD3'
+                border_td = '#5F1D28' if is_dark_theme else '#FFE4E6'
+                cat_col = '#FB7185' if is_dark_theme else '#E11D48'
+                vin_col = '#F43F5E' if is_dark_theme else '#BE123C'
+                exc_bg = '#881337' if is_dark_theme else '#FECDD3'
+                exc_col = '#FFF' if is_dark_theme else '#9F1239'
             
-            rows_html = ""
-            for a in excess_alerts:
-                rows_html += (
-                    f"<tr>"
-                    f"<td style='padding: 7px 8px; border: 1px solid {border_td}; font-weight: 600; color: {cat_col};'>{a['Category']}</td>"
-                    f"<td style='padding: 7px 8px; border: 1px solid {border_td};'>{a['Model / Part']}</td>"
-                    f"<td style='padding: 7px 8px; border: 1px solid {border_td}; text-align: center;'>{a['Clearance 6:30 AM']}</td>"
-                    f"<td style='padding: 7px 8px; border: 1px solid {border_td}; text-align: center; font-weight: bold; color: {vin_col};'>{a['Today VIN']}</td>"
-                    f"<td style='padding: 7px 8px; border: 1px solid {border_td}; text-align: center; font-weight: bold; background-color: {exc_bg}; color: {exc_col};'>+{a['Excess Qty']}</td>"
-                    f"</tr>"
-                )
+                rows_html = ""
+                for a in excess_alerts:
+                    rows_html += (
+                        f"<tr>"
+                        f"<td style='padding: 7px 8px; border: 1px solid {border_td}; font-weight: 600; color: {cat_col};'>{a['Category']}</td>"
+                        f"<td style='padding: 7px 8px; border: 1px solid {border_td};'>{a['Model / Part']}</td>"
+                        f"<td style='padding: 7px 8px; border: 1px solid {border_td}; text-align: center;'>{a['Clearance 6:30 AM']}</td>"
+                        f"<td style='padding: 7px 8px; border: 1px solid {border_td}; text-align: center; font-weight: bold; color: {vin_col};'>{a['Today VIN']}</td>"
+                        f"<td style='padding: 7px 8px; border: 1px solid {border_td}; text-align: center; font-weight: bold; background-color: {exc_bg}; color: {exc_col};'>+{a['Excess Qty']}</td>"
+                        f"</tr>"
+                    )
                 
-            alert_box_html = (
-                f"<div style='border: 2px solid #E11D48; border-radius: 10px; background-color: {bg_card}; padding: 14px; margin-top: 15px; margin-bottom: 20px;'>"
-                f"<div style='font-weight: 700; font-size: 15px; color: {title_color}; margin-bottom: 6px;'>{header_title}</div>"
-                f"<div style='font-size: 12px; color: {sub_color}; margin-bottom: 10px;'>The following parts / aggregates have Today VIN quantity exceeding the 6:30 AM Clearance quantity:</div>"
-                f"<table style='width: 100%; border-collapse: collapse; font-family: sans-serif; font-size: 12px; color: {text_col};'>"
-                f"<thead>"
-                f"<tr style='background-color: {th_bg}; text-align: left;'>"
-                f"<th style='padding: 8px; border: 1px solid {border_hdr};'>Category</th>"
-                f"<th style='padding: 8px; border: 1px solid {border_hdr};'>Model / Part Description</th>"
-                f"<th style='padding: 8px; border: 1px solid {border_hdr}; text-align: center;'>Clearance After 6:30AM</th>"
-                f"<th style='padding: 8px; border: 1px solid {border_hdr}; text-align: center;'>Today VIN</th>"
-                f"<th style='padding: 8px; border: 1px solid {border_hdr}; text-align: center;'>Excess VIN Qty</th>"
-                f"</tr>"
-                f"</thead>"
-                f"<tbody>{rows_html}</tbody>"
-                f"</table>"
-                f"</div>"
-            )
-            st.markdown(alert_box_html, unsafe_allow_html=True)
+                alert_box_html = (
+                    f"<div style='border: 2px solid #E11D48; border-radius: 10px; background-color: {bg_card}; padding: 14px; margin-top: 15px; margin-bottom: 20px;'>"
+                    f"<div style='font-weight: 700; font-size: 15px; color: {title_color}; margin-bottom: 6px;'>{header_title}</div>"
+                    f"<div style='font-size: 12px; color: {sub_color}; margin-bottom: 10px;'>The following parts / aggregates have Today VIN quantity exceeding the 6:30 AM Clearance quantity:</div>"
+                    f"<table style='width: 100%; border-collapse: collapse; font-family: sans-serif; font-size: 12px; color: {text_col};'>"
+                    f"<thead>"
+                    f"<tr style='background-color: {th_bg}; text-align: left;'>"
+                    f"<th style='padding: 8px; border: 1px solid {border_hdr};'>Category</th>"
+                    f"<th style='padding: 8px; border: 1px solid {border_hdr};'>Model / Part Description</th>"
+                    f"<th style='padding: 8px; border: 1px solid {border_hdr}; text-align: center;'>Clearance After 6:30AM</th>"
+                    f"<th style='padding: 8px; border: 1px solid {border_hdr}; text-align: center;'>Today VIN</th>"
+                    f"<th style='padding: 8px; border: 1px solid {border_hdr}; text-align: center;'>Excess VIN Qty</th>"
+                    f"</tr>"
+                    f"</thead>"
+                    f"<tbody>{rows_html}</tbody>"
+                    f"</table>"
+                    f"</div>"
+                )
+                st.markdown(alert_box_html, unsafe_allow_html=True)
 
-        # Filters: View Mode, Line, Search
-        st.markdown("<div style='height: 8px;'></div>", unsafe_allow_html=True)
-        f_col1, f_col2, f_col3 = st.columns([1.5, 1.2, 1.3])
-        with f_col1:
-            sh_view_mode = st.radio(
-                "📋 Display Filter:",
-                ["🚨 Critical Shortages Only", "📋 All Parts & Current Stock"],
-                horizontal=True,
-                key="sh_tab_view_mode"
-            )
-        with f_col2:
-            sh_line_filter = st.selectbox(
-                "🏭 Filter by TCF Line:",
-                ["All Lines (TCF1 + TCF2)", "TCF1 Line", "TCF2 Line"],
-                key="sh_tab_line_filter"
-            )
-        with f_col3:
-            sh_search = st.text_input(
-                "🔍 Search Part / Model:",
-                placeholder="Search part number or model...",
-                key="sh_tab_search"
-            )
+            # Filters: View Mode, Line, Search
+            st.markdown("<div style='height: 8px;'></div>", unsafe_allow_html=True)
+            f_col1, f_col2, f_col3 = st.columns([1.5, 1.2, 1.3])
+            with f_col1:
+                sh_view_mode = st.radio(
+                    "📋 Display Filter:",
+                    ["🚨 Critical Shortages Only", "📋 All Parts & Current Stock"],
+                    horizontal=True,
+                    key="sh_tab_view_mode"
+                )
+            with f_col2:
+                sh_line_filter = st.selectbox(
+                    "🏭 Filter by TCF Line:",
+                    ["All Lines (TCF1 + TCF2)", "TCF1 Line", "TCF2 Line"],
+                    key="sh_tab_line_filter"
+                )
+            with f_col3:
+                sh_search = st.text_input(
+                    "🔍 Search Part / Model:",
+                    placeholder="Search part number or model...",
+                    key="sh_tab_search"
+                )
 
-        show_shortages_only = (sh_view_mode == "🚨 Critical Shortages Only")
-        target_cpt = cpt_sh_df if show_shortages_only else cpt_all_df
-        target_wir = wir_sh_df if show_shortages_only else wir_all_df
+            show_shortages_only = (sh_view_mode == "🚨 Critical Shortages Only")
+            target_cpt = cpt_sh_df if show_shortages_only else cpt_all_df
+            target_wir = wir_sh_df if show_shortages_only else wir_all_df
 
-        def _apply_sh_filters(df_in, part_hdr):
-            if df_in is None or df_in.empty:
-                return df_in
-            df_out = df_in.copy()
-            if sh_line_filter == "TCF1 Line":
-                df_out = df_out[df_out['LINE'] == 'TCF1']
-            elif sh_line_filter == "TCF2 Line":
-                df_out = df_out[df_out['LINE'] == 'TCF2']
-            if sh_search.strip():
-                q = sh_search.strip().lower()
-                df_out = df_out[
-                    df_out[part_hdr].astype(str).str.lower().str.contains(q, regex=False, na=False) |
-                    df_out['Model'].astype(str).str.lower().str.contains(q, regex=False, na=False) |
-                    df_out['VC Number'].astype(str).str.lower().str.contains(q, regex=False, na=False)
-                ]
-            return df_out
+            def _apply_sh_filters(df_in, part_hdr):
+                if df_in is None or df_in.empty:
+                    return df_in
+                df_out = df_in.copy()
+                if sh_line_filter == "TCF1 Line":
+                    df_out = df_out[df_out['LINE'] == 'TCF1']
+                elif sh_line_filter == "TCF2 Line":
+                    df_out = df_out[df_out['LINE'] == 'TCF2']
+                if sh_search.strip():
+                    q = sh_search.strip().lower()
+                    df_out = df_out[
+                        df_out[part_hdr].astype(str).str.lower().str.contains(q, regex=False, na=False) |
+                        df_out['Model'].astype(str).str.lower().str.contains(q, regex=False, na=False) |
+                        df_out['VC Number'].astype(str).str.lower().str.contains(q, regex=False, na=False)
+                    ]
+                return df_out
 
-        filtered_cpt = _apply_sh_filters(target_cpt, "Cockpit WH Part Number")
-        filtered_wir = _apply_sh_filters(target_wir, "Wiring Part Number")
+            filtered_cpt = _apply_sh_filters(target_cpt, "Cockpit WH Part Number")
+            filtered_wir = _apply_sh_filters(target_wir, "Wiring Part Number")
 
-        st.markdown("---")
-        st.markdown("#### 🚗 Cockpit WH Shortage Report")
-        if filtered_cpt is not None and not filtered_cpt.empty:
-            st.markdown(render_html_formatted_shortage(filtered_cpt, "Cockpit WH Part Number", is_dark_theme), unsafe_allow_html=True)
-        else:
-            if show_shortages_only:
-                st.success("✅ No Cockpit WH Shortages detected for selected filters! All required cockpit WH assemblies are covered by clearance stock.")
+            st.markdown("---")
+            st.markdown("#### 🚗 Cockpit WH Shortage Report")
+            if filtered_cpt is not None and not filtered_cpt.empty:
+                st.markdown(render_html_formatted_shortage(filtered_cpt, "Cockpit WH Part Number", is_dark_theme), unsafe_allow_html=True)
             else:
-                st.info("No cockpit WH records match your filters.")
+                if show_shortages_only:
+                    st.success("✅ No Cockpit WH Shortages detected for selected filters! All required cockpit WH assemblies are covered by clearance stock.")
+                else:
+                    st.info("No cockpit WH records match your filters.")
 
-        st.markdown("#### ⚡ Wiring Harness Shortage Report")
-        if filtered_wir is not None and not filtered_wir.empty:
-            st.markdown(render_html_formatted_shortage(filtered_wir, "Wiring Part Number", is_dark_theme), unsafe_allow_html=True)
-        else:
-            if show_shortages_only:
-                st.success("✅ No Wiring Harness Shortages detected for selected filters! All required wiring harnesses are covered by clearance stock.")
+            st.markdown("#### ⚡ Wiring Harness Shortage Report")
+            if filtered_wir is not None and not filtered_wir.empty:
+                st.markdown(render_html_formatted_shortage(filtered_wir, "Wiring Part Number", is_dark_theme), unsafe_allow_html=True)
             else:
-                st.info("No wiring harness records match your filters.")
+                if show_shortages_only:
+                    st.success("✅ No Wiring Harness Shortages detected for selected filters! All required wiring harnesses are covered by clearance stock.")
+                else:
+                    st.info("No wiring harness records match your filters.")
 
-        # Dedicated Export Section in Tab 1
-        st.markdown("---")
-        exp_sh1, exp_sh2 = st.columns(2)
-        with exp_sh1:
-            ui.cached_download(label="Download all cockpit & wiring parts", key="export_cockpit_wiring_tab_all_parts",
-                builder=lambda: ui.table_workbook({'Cockpit WH': cpt_all_df, 'Wiring': wir_all_df}),
-                file_name="Cockpit_WH_and_Wiring_Report_All_Parts.xlsx")
-        with exp_sh2:
-            ui.cached_download(label="Download critical shortages", key="export_cockpit_wiring_tab_critical_only",
-                builder=lambda: ui.table_workbook({'Cockpit WH Shortage': cpt_sh_df, 'Wiring Shortage': wir_sh_df}),
-                file_name="Cockpit_WH_and_Wiring_Critical_Shortages.xlsx")
+            # Dedicated Export Section in Tab 1
+            st.markdown("---")
+            exp_sh1, exp_sh2 = st.columns(2)
+            with exp_sh1:
+                ui.cached_download(label="Download all cockpit & wiring parts", key="export_cockpit_wiring_tab_all_parts",
+                    builder=lambda: ui.table_workbook({'Cockpit WH': cpt_all_df, 'Wiring': wir_all_df}),
+                    file_name="Cockpit_WH_and_Wiring_Report_All_Parts.xlsx")
+            with exp_sh2:
+                ui.cached_download(label="Download critical shortages", key="export_cockpit_wiring_tab_critical_only",
+                    builder=lambda: ui.table_workbook({'Cockpit WH Shortage': cpt_sh_df, 'Wiring Shortage': wir_sh_df}),
+                    file_name="Cockpit_WH_and_Wiring_Critical_Shortages.xlsx")

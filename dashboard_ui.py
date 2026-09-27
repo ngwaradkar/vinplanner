@@ -44,21 +44,13 @@ PAGE_DESCRIPTIONS = {
 # Navigation hierarchy: Display Name -> (Canonical Page, Subtab/Section)
 NAVIGATION_STRUCTURE = {
     'OPERATIONS': [
-        ('🏢 Plant Control Tower', 'Overview', None),
         ('🔷 TCF1 Assembly Line', 'TCF1 Line', None),
         ('🟣 TCF2 Assembly Line', 'TCF2 Line', None),
         ('🔍 Float & Vehicle Search', 'Total Float & Search', None),
-        ('⚠️ Quality Holds Monitor', 'Quality Holds', None),
-    ],
-    'MATERIAL CONTROL': [
-        ('🧩 Cockpit & Wiring Shortages', 'Cockpit & Wiring Shortages', None),
-        ('⚙️ Engine Starting Stocks', 'Control Panel', 'Engine stocks'),
-        ('🔋 EV & Model Shortages', 'Control Panel', 'EV & model shortages'),
+        ('⚠️ Quality Inspection Holds Monitor', 'Quality Holds', None),
     ],
     'REPORTS & ANALYTICS': [
-        ('📊 Production Summary & Matrix', 'Summary & Excel Reports', 'summary'),
-        ('🎨 Paint Shop Float Summary', 'Summary & Excel Reports', 'paint_float'),
-        ('⏱️ Hourly Production Tracker', 'Summary & Excel Reports', 'hourly'),
+        ('📊 Plant Summary & Master Analytics Reports', 'Summary & Excel Reports', None),
         ('📱 Telegram Dispatcher', 'Telegram Dispatcher', None),
     ],
     'ADMIN & DATA SOURCES': [
@@ -828,7 +820,7 @@ def setup_shell():
     )
 
     # State initialization
-    st.session_state.setdefault('theme', '🌙 Dark Theme')
+    st.session_state.setdefault('theme', '☀️ White Theme')
     is_dark = st.session_state.theme == '🌙 Dark Theme'
     tokens = get_theme_tokens(is_dark)
 
@@ -879,7 +871,7 @@ def setup_shell():
         st.markdown(f"<div style='font-size:0.7rem; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; color:{tokens['text_muted']}; margin-bottom:0.25rem;'>Preferences</div>", unsafe_allow_html=True)
         theme_sel = st.selectbox(
             'Appearance',
-            ['🌙 Dark Theme', '☀️ White Theme'],
+            ['☀️ White Theme', '🌙 Dark Theme'],
             key='theme',
             label_visibility='collapsed'
         )
@@ -1058,19 +1050,17 @@ def file_status_row(name, source, available):
         label = "PENDING UPLOAD"
         dot = "red"
 
-    # Keep joined rows free of template whitespace: Markdown treats indented
-    # HTML after a blank line as a code block, even with unsafe_allow_html=True.
-    return (
-        f'<div style="display:flex; align-items:center; justify-content:space-between; padding:0.65rem 0.5rem; border-bottom:1px solid {tokens["border"]};">'
-        '<div>'
-        f'<div style="font-size:0.86rem; font-weight:650; color:{tokens["text_primary"]};">{html.escape(name)}</div>'
-        f'<div style="font-size:0.75rem; color:{tokens["text_muted"]}; margin-top:0.15rem;">Source: {html.escape(str(source))}</div>'
-        '</div>'
-        f'<span style="font-size:0.72rem; font-weight:700; padding:3px 8px; border-radius:4px; background:{bg}; color:{fg}; border:1px solid {fg}30; white-space:nowrap;">'
-        f'<span class="tml-dot {dot}" style="margin-right:4px;"></span>{label}'
-        '</span>'
-        '</div>'
-    )
+    return f"""
+    <div style="display:flex; align-items:center; justify-content:space-between; padding:0.65rem 0.5rem; border-bottom:1px solid {tokens['border']};">
+        <div>
+            <div style="font-size:0.86rem; font-weight:650; color:{tokens['text_primary']};">{html.escape(name)}</div>
+            <div style="font-size:0.75rem; color:{tokens['text_muted']}; margin-top:0.15rem;">Source: {html.escape(str(source))}</div>
+        </div>
+        <span style="font-size:0.72rem; font-weight:700; padding:3px 8px; border-radius:4px; background:{bg}; color:{fg}; border:1px solid {fg}30; white-space:nowrap;">
+            <span class="tml-dot {dot}" style="margin-right:4px;"></span>{label}
+        </span>
+    </div>
+    """
 
 
 def show_data_health(sources):
@@ -1423,19 +1413,46 @@ def render_html_table_2_v2(rows: list, is_dark: bool = True) -> str:
 
 
 def render_html_formatted_shortage_v2(df: pd.DataFrame, part_hdr: str, is_dark: bool = True) -> str:
-    """Upgraded Cockpit WH and Wiring Harness shortage table."""
+    """Upgraded Cockpit WH and Wiring Harness shortage table.
+
+    Improvements over the original: rows are sorted so the most critical
+    shortage (by total cascade shortage) surfaces first, a leading Status
+    column gives an instant read without scanning every number, zebra
+    striping and slightly larger type improve scan-ability on a dense
+    table, and each shortage-stage header carries an icon so the three
+    cascade stages (PBS / Sealant / Total) are easy to tell apart at a
+    glance.
+    """
     if df.empty:
         return "<p style='color: var(--txt-mut); font-style: italic; padding: 0.5rem;'>No shortage records for this filter.</p>"
 
     tokens = get_theme_tokens(is_dark)
     crit_bg = tokens['critical_bg']
     crit_fg = tokens['critical']
+    zebra_bg = tokens.get('bg_elev', tokens.get('bg_elevated', '#F4F7FB' if not is_dark else '#17202C'))
+
+    shortage_cols = ['Shortage PBS FLOAT', 'Shortage Upto Sealant', 'Shortage TOTAL FLOAT']
+
+    def _num(v):
+        try:
+            return float(v)
+        except (TypeError, ValueError):
+            return 0.0
+
+    # Sort so the most critical (most negative total shortage) rows are
+    # first -- falls back to PBS-stage shortage as a tie-breaker, since
+    # that's the earliest point in the cascade a shortage can appear.
+    df_sorted = df.copy()
+    df_sorted['_sort_total'] = df_sorted.get('Shortage TOTAL FLOAT', 0).apply(_num)
+    df_sorted['_sort_pbs'] = df_sorted.get('Shortage PBS FLOAT', 0).apply(_num)
+    df_sorted = df_sorted.sort_values(['_sort_total', '_sort_pbs'], ascending=[True, True])
 
     html_out = f"""
     <div class="matrix-card">
-    <table class="matrix-table" style="font-size: 11.5px;">
+    <table class="matrix-table" style="font-size: 12px;">
         <thead>
             <tr>
+                <th style="text-align:center; width:50px;">Status</th>
                 <th style="text-align:center;">{part_hdr}</th>
                 <th style="text-align:left; width:180px;">Model</th>
                 <th style="text-align:center;">Line</th>
@@ -1444,15 +1461,18 @@ def render_html_formatted_shortage_v2(df: pd.DataFrame, part_hdr: str, is_dark: 
                 <th>Paint Total Float</th>
                 <th>PBS Float</th>
                 <th>Float Upto Sealant</th>
-                <th>Shortage (PBS)</th>
-                <th>Shortage (Sealant)</th>
-                <th>Shortage (Total)</th>
+                <th>📍 Shortage (PBS)</th>
+                <th>🎨 Shortage (Sealant)</th>
+                <th>📦 Shortage (Total)</th>
             </tr>
         </thead>
         <tbody>
     """
-    for _, r in df.iterrows():
-        html_out += '<tr>'
+    for i, (_, r) in enumerate(df_sorted.iterrows()):
+        is_critical = any(_num(r.get(c, 0)) < 0 for c in shortage_cols)
+        row_bg = f"background:{zebra_bg};" if (i % 2 == 1 and not is_critical) else ""
+        html_out += f'<tr style="{row_bg}">'
+        html_out += f'<td style="text-align:center;">{"🔴" if is_critical else "🟢"}</td>'
         html_out += f'<td style="text-align:center; font-family:monospace; font-weight:600;">{r[part_hdr]}</td>'
         html_out += f'<td style="text-align:left; font-weight:600;">{r.get("Model", "")}</td>'
 
@@ -1466,12 +1486,16 @@ def render_html_formatted_shortage_v2(df: pd.DataFrame, part_hdr: str, is_dark: 
         html_out += f'<td>{r.get("PBS FLOAT", 0)}</td>'
         html_out += f'<td>{r.get("Cabs Float UPTO SEALANT", 0)}</td>'
 
-        for col_sh in ['Shortage PBS FLOAT', 'Shortage Upto Sealant', 'Shortage TOTAL FLOAT']:
+        for col_sh in shortage_cols:
             val_sh = r.get(col_sh, 0)
-            sh_style = ""
-            if isinstance(val_sh, (int, float)) and val_sh < 0:
-                sh_style = f"background:{crit_bg}; color:{crit_fg}; font-weight:750;"
-            html_out += f'<td style="{sh_style}">{val_sh}</td>'
+            num_val = _num(val_sh)
+            if num_val < 0:
+                sh_style = f"background:{crit_bg}; color:{crit_fg}; font-weight:750; border-radius:4px;"
+                display_val = f"🔻 {val_sh}"
+            else:
+                sh_style = ""
+                display_val = f"{val_sh}"
+            html_out += f'<td style="{sh_style}">{display_val}</td>'
         html_out += '</tr>'
 
     html_out += '</tbody></table></div>'
