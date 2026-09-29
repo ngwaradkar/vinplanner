@@ -1,5 +1,8 @@
 import pandas as pd
 import numpy as np
+import streamlit as st
+
+_CACHE_TTL_SECONDS = 1800
 
 def _bom_lookup(bom):
     if bom is None or bom.empty:
@@ -7,6 +10,7 @@ def _bom_lookup(bom):
     return {row['Short Vehicle Code']: row for row in
             bom.drop_duplicates('Short Vehicle Code', keep='first').to_dict('records')}
 
+@st.cache_data(show_spinner=False, ttl=_CACHE_TTL_SECONDS)
 def calculate_true_stock(shift_start_stock, tcf_drops, bom, bom_part_col):
     """
     Computes True Current Stock = Shift Start Stock - Consumed Parts.
@@ -100,6 +104,7 @@ def _is_model_trim_matched(cab_model, cab_sales_desc, target_model, target_trims
     return False
 
 
+@st.cache_data(show_spinner=False, ttl=_CACHE_TTL_SECONDS)
 def run_allocation(pbs_queue, bom, true_engine, true_cockpit, true_wiring, true_nova=None, model_shortages=None):
     """
     Runs the FIFO allocation loop for PBS cabs.
@@ -323,6 +328,7 @@ def run_allocation(pbs_queue, bom, true_engine, true_cockpit, true_wiring, true_
         'wiring': virt_wiring
     }
 
+@st.cache_data(show_spinner=False, ttl=_CACHE_TTL_SECONDS)
 def get_paint_float_stages(df_float):
     """
     Classifies each cab in the float report into its current stage in the paint flow.
@@ -403,6 +409,7 @@ def get_detailed_paint_summary_stage(row):
     else:
         return 'PT BYPASS'
 
+@st.cache_data(show_spinner=False, ttl=_CACHE_TTL_SECONDS)
 def calculate_stagewise_shortage(df_float_stages, bom, true_stocks):
     """
     Computes material requirements and shortages for each stage of the paint float.
@@ -507,6 +514,7 @@ def calculate_stagewise_shortage(df_float_stages, bom, true_stocks):
     return pd.DataFrame(report_rows)
 
 
+@st.cache_data(show_spinner=False, ttl=_CACHE_TTL_SECONDS)
 def find_missing_bom_vcs(df_float, bom):
     """
     Scans every cab currently in the float report and flags Short Vehicle Codes

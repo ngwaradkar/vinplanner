@@ -840,11 +840,27 @@ def setup_shell():
         </div>
         """, unsafe_allow_html=True)
 
-        # Build options list for grouped radio
+        # Build options list for grouped radio, and work out where each
+        # group boundary falls so we can draw a subtle divider there --
+        # computed from NAVIGATION_STRUCTURE's own group sizes, so this
+        # stays correct even if items are added/removed/reordered later.
         flat_options = []
+        group_boundaries = []
+        running_count = 0
         for section, items in NAVIGATION_STRUCTURE.items():
+            running_count += len(items)
+            if running_count < sum(len(v) for v in NAVIGATION_STRUCTURE.values()):
+                group_boundaries.append(running_count + 1)  # 1-indexed, next item starts a new group
             for label, _, _ in items:
                 flat_options.append(label)
+
+        if group_boundaries:
+            divider_css = "\n".join(
+                f'[data-testid="stSidebar"] [role="radiogroup"] label[data-baseweb="radio"]:nth-of-type({n}) {{'
+                f' margin-top: 0.65rem; padding-top: 0.65rem; border-top: 1px solid {tokens["border"]}; }}'
+                for n in group_boundaries
+            )
+            st.markdown(f"<style>{divider_css}</style>", unsafe_allow_html=True)
 
         # Default or restored navigation
         cur_stored = st.session_state.get('active_nav_label', flat_options[0])
@@ -861,9 +877,12 @@ def setup_shell():
             label_visibility='collapsed'
         )
 
-        canonical_page, subtab = NAV_LOOKUP.get(selected_label, ('Overview', None))
-        if subtab:
-            st.session_state['active_subtab'] = subtab
+        # selected_label is always one of flat_options (guaranteed by the
+        # widget), so this fallback is defensive rather than reachable --
+        # but it now points at a real page instead of the old 'Overview'
+        # value, which no longer exists after the nav consolidation.
+        _default_page = NAV_LOOKUP[flat_options[0]][0]
+        canonical_page, _subtab = NAV_LOOKUP.get(selected_label, (_default_page, None))
 
         st.divider()
 
@@ -877,7 +896,7 @@ def setup_shell():
         )
 
         st.markdown("<div style='height:4px;'></div>", unsafe_allow_html=True)
-        if st.button('🔄 Refresh Source Files', use_container_width=True):
+        if st.button('🔄 Refresh Source Files', width='stretch'):
             st.session_state.pop('_file_registry', None)
             st.session_state.pop('last_onedrive_sync', None)
             st.session_state.pop('_report_snapshot', None)
@@ -1074,7 +1093,7 @@ def show_data_health(sources):
             name = getattr(source, 'name', str(source) if isinstance(source, str) else 'Workbook sheet')
             timestamp = st.session_state.get('upload_time_' + category, 'Pending')
         rows.append({'Report Category': category.replace('_', ' '), 'Source File': name, 'Last Updated': timestamp})
-    st.dataframe(pd.DataFrame(rows), hide_index=True, use_container_width=True)
+    st.dataframe(pd.DataFrame(rows), hide_index=True, width='stretch')
 
 
 # ==============================================================================
@@ -1117,6 +1136,7 @@ def overview(namespace: dict, sources: dict):
     # Paint Lifting by line
     t1_paint = 0
     t2_paint = 0
+    paint_is_estimated = False
     if shop_vehicles is not None and not shop_vehicles.empty:
         t1_models = ['PUNCH', 'PUNCH Exports', 'PUNCH EV', 'ALTROZ', 'ALTROZ DCA', 'ALTROZ EV']
         t2_models = ['HARRIER EV', 'SAFARI', 'HARRIER', 'SAFARI EV']
@@ -1126,6 +1146,7 @@ def overview(namespace: dict, sources: dict):
         total_paint = int(shop_totals.get('PAINT', 0)) if shop_totals else 0
         t1_paint = int(total_paint * 0.6)
         t2_paint = max(0, total_paint - t1_paint)
+        paint_is_estimated = True
 
     # Additional metrics
     punch_ev_vin = namespace.get('nova_vin_qty', 0)
@@ -1177,7 +1198,11 @@ def overview(namespace: dict, sources: dict):
     with c1:
         st.markdown(render_kpi_card("TCF1 Dropping", f"{t1_drop} cabs", "Built today in TCF1", status="neutral", line="tcf1", is_dark=is_dark), unsafe_allow_html=True)
     with c2:
-        st.markdown(render_kpi_card("TCF1 Paint Lifting", f"{t1_paint} cabs", "Fed from Paint to TCF1", status="info", line="tcf1", is_dark=is_dark), unsafe_allow_html=True)
+        st.markdown(render_kpi_card(
+            "TCF1 Paint Lifting", f"{t1_paint} cabs" + (" ⚠️" if paint_is_estimated else ""),
+            "Estimated (60/40 split, no line-level data)" if paint_is_estimated else "Fed from Paint to TCF1",
+            status="info", line="tcf1", is_dark=is_dark
+        ), unsafe_allow_html=True)
     with c3:
         st.markdown(render_kpi_card("TCF1 Ready for Build", f"{t1_ready} cabs", "Cleared for TCF1 line", status="healthy", status_label="● READY", line="tcf1", is_dark=is_dark), unsafe_allow_html=True)
     with c4:
@@ -1195,7 +1220,11 @@ def overview(namespace: dict, sources: dict):
     with c5:
         st.markdown(render_kpi_card("TCF2 Dropping", f"{t2_drop} cabs", "Built today in TCF2", status="neutral", line="tcf2", is_dark=is_dark), unsafe_allow_html=True)
     with c6:
-        st.markdown(render_kpi_card("TCF2 Paint Lifting", f"{t2_paint} cabs", "Fed from Paint to TCF2", status="info", line="tcf2", is_dark=is_dark), unsafe_allow_html=True)
+        st.markdown(render_kpi_card(
+            "TCF2 Paint Lifting", f"{t2_paint} cabs" + (" ⚠️" if paint_is_estimated else ""),
+            "Estimated (60/40 split, no line-level data)" if paint_is_estimated else "Fed from Paint to TCF2",
+            status="info", line="tcf2", is_dark=is_dark
+        ), unsafe_allow_html=True)
     with c7:
         st.markdown(render_kpi_card("TCF2 Ready for Build", f"{t2_ready} cabs", "Cleared for TCF2 line", status="healthy", status_label="● READY", line="tcf2", is_dark=is_dark), unsafe_allow_html=True)
     with c8:
@@ -1226,7 +1255,7 @@ def overview(namespace: dict, sources: dict):
             {'Line': 'TCF2 Line', 'Ready': t2_ready, 'Blocked': t2_blocked, 'Drops': t2_drop},
             {'Line': 'Total Plant', 'Ready': t1_ready + t2_ready, 'Blocked': t1_blocked + t2_blocked, 'Drops': t1_drop + t2_drop},
         ]
-        st.dataframe(pd.DataFrame(summary_rows), hide_index=True, use_container_width=True)
+        st.dataframe(pd.DataFrame(summary_rows), hide_index=True, width='stretch')
 
     with col_right:
         st.markdown("#### 🚫 Main Blocking Reasons (PBS)")
@@ -1240,28 +1269,25 @@ def overview(namespace: dict, sources: dict):
                           .head(6)
                           .rename_axis('Blocking Reason')
                           .reset_index(name='Affected Cabs'))
-                st.dataframe(counts, hide_index=True, use_container_width=True)
+                st.dataframe(counts, hide_index=True, width='stretch')
             else:
                 st.info("No cabs currently blocked for material shortages in PBS queue.")
         else:
             st.info("No active allocation queue available.")
 
-    # Vehicle Search Quick Tool
+    # Vehicle search lives on its own dedicated page (with filters by line,
+    # paint stage, and quality-hold status, plus a full cab inspector) --
+    # pointing there instead of duplicating a lesser search box here.
     st.markdown("<div style='height:8px;'></div>", unsafe_allow_html=True)
-    render_section_header(title="🔍 Quick Vehicle Search", subtitle="Locate any cab across the plant by BIW, VIN, or Vehicle Code", is_dark=is_dark)
-    search_q = st.text_input("Enter BIW Number, VIN, or Vehicle Code", placeholder="e.g. 5468...", key="quick_search_input", label_visibility="collapsed")
-    float_data = namespace.get('temp_float_df', pd.DataFrame())
-    if search_q.strip() and float_data is not None and not float_data.empty:
-        mask = pd.Series(False, index=float_data.index)
-        for col in ['BIW NUMBER', 'VIN', 'VEHICLE CODE']:
-            if col in float_data.columns:
-                mask |= float_data[col].astype(str).str.contains(search_q.strip(), case=False, regex=False, na=False)
-        cols_to_show = [c for c in ['BIW NUMBER', 'VIN', 'PRODUCT', 'SHOP', 'Stage', 'Status', 'Blocking Reason'] if c in float_data.columns]
-        results = float_data.loc[mask, cols_to_show]
-        if not results.empty:
-            st.dataframe(results, hide_index=True, use_container_width=True)
-        else:
-            st.warning(f"No vehicles found matching '{search_q}'.")
+
+    def _go_to_vehicle_search():
+        # Callbacks run before the next script run, i.e. before the sidebar
+        # radio (key='active_nav_label') is re-instantiated -- setting it
+        # inline here after the radio exists raises
+        # StreamlitWidgetAlreadyInstantiatedError.
+        st.session_state['active_nav_label'] = '🔍 Float & Vehicle Search'
+
+    st.button("🔍 Go to Float & Vehicle Search →", width='stretch', on_click=_go_to_vehicle_search)
 
     # Data Freshness & Ingestion Health
     with st.expander("🛡️ Data Sources & Ingestion Freshness"):

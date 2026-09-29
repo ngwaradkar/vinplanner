@@ -625,8 +625,9 @@ for category in all_categories:
     elif detected_files.get(category) is not None:
         loaded_data[category] = detected_files[category]
 is_dark_theme = st.session_state.theme == '🌙 Dark Theme'
-label_color = '#f1f5f9' if is_dark_theme else '#172033'
-sub_text_color = '#cbd5e1' if is_dark_theme else '#475569'
+_page_tokens = ui.get_theme_tokens(is_dark_theme)
+label_color = _page_tokens['text_primary']
+sub_text_color = _page_tokens['text_secondary']
 if page == 'Control Panel':
     ui.render_section_header("Plant Data Sources & Material Clearance Control",
                              "Manage workbook ingestion, live OneDrive sync, starting clearance stocks, and model shortage rules.",
@@ -643,7 +644,7 @@ if page == 'Control Panel':
             
                 col_sync_btn, col_auto_toggle = st.columns([1, 1])
                 with col_sync_btn:
-                    if st.button("Sync now", type="primary", use_container_width=True):
+                    if st.button("Sync now", type="primary", width='stretch'):
                         if input_url:
                             with st.spinner("Downloading and parsing OneDrive data..."):
                                 success, msg = perform_onedrive_sync(input_url)
@@ -814,7 +815,7 @@ if page == 'Control Panel':
             with st.form('nova_stock_form'):
                 st.subheader('Punch EV starting stocks')
                 stock_source = st.session_state.nova_materials_df
-                stock_edits = st.data_editor(stock_source, hide_index=True, use_container_width=True,
+                stock_edits = st.data_editor(stock_source, hide_index=True, width='stretch',
                     disabled=[column for column in stock_source.columns if column != 'Clearance Qty'],
                     column_config={'Clearance Qty': st.column_config.NumberColumn('Starting clearance', min_value=0, step=1, required=True)},
                     key='nova_stock_editor')
@@ -887,7 +888,7 @@ if page == 'Control Panel':
                     )
             
                 st.markdown("<div style='height: 4px;'></div>", unsafe_allow_html=True)
-                if st.button("➕ Add Shortage Item", type="primary", use_container_width=True, key="add_ms_btn"):
+                if st.button("➕ Add Shortage Item", type="primary", width='stretch', key="add_ms_btn"):
                     if not input_ms_part_name.strip():
                         st.error("Please enter a Part Name before adding.")
                     else:
@@ -952,7 +953,7 @@ if page == 'Control Panel':
                             </div>
                             """, unsafe_allow_html=True)
                         with col_del_ms:
-                            if st.button("🗑️", key=f"del_ms_{idx_ms}", help="Delete item", use_container_width=True):
+                            if st.button("🗑️", key=f"del_ms_{idx_ms}", help="Delete item", width='stretch'):
                                 st.session_state.model_shortages_df = st.session_state.model_shortages_df.drop(idx_ms).reset_index(drop=True)
                                 try:
                                     dl.save_model_shortages_to_db(st.session_state.model_shortages_df)
@@ -961,7 +962,7 @@ if page == 'Control Panel':
                                 st.toast("Item removed", icon="🗑️")
                                 st.rerun()
 
-                    if st.button("🗑️ Clear All Model Shortages", key="clear_all_ms_btn", use_container_width=True):
+                    if st.button("🗑️ Clear All Model Shortages", key="clear_all_ms_btn", width='stretch'):
                         st.session_state.model_shortages_df = pd.DataFrame(columns=['Model', 'Trims', 'Part Name', 'Clearance Qty'])
                         try:
                             dl.save_model_shortages_to_db(st.session_state.model_shortages_df)
@@ -974,7 +975,7 @@ if page == 'Control Panel':
             with st.form('engine_stock_form'):
                 st.subheader('Engine starting stocks')
                 stock_source = st.session_state.engine_df
-                stock_edits = st.data_editor(stock_source, hide_index=True, use_container_width=True,
+                stock_edits = st.data_editor(stock_source, hide_index=True, width='stretch',
                     disabled=[column for column in stock_source.columns if column != 'Clearance After 6:30AM'],
                     column_config={'Clearance After 6:30AM': st.column_config.NumberColumn('Starting clearance', min_value=0, step=1, required=True)},
                     key='engine_stock_editor')
@@ -1014,7 +1015,7 @@ if page == 'Control Panel':
                 </div>
                 """, unsafe_allow_html=True)
 
-                if st.button("🔄 Reset Clearances to 0 (Shift Start)", type="primary", use_container_width=True, key="reset_clearances_btn", on_click=ui.clear_stock_drafts):
+                if st.button("🔄 Reset Clearances to 0 (Shift Start)", type="primary", width='stretch', key="reset_clearances_btn", on_click=ui.clear_stock_drafts):
                     st.session_state.engine_df = pd.DataFrame(engine_default_data)
                     st.session_state.nova_materials_df = pd.DataFrame(nova_default_data)
                     st.session_state.model_shortages_df = pd.DataFrame(columns=['Model', 'Part Name', 'Clearance Qty'])
@@ -1072,7 +1073,7 @@ if 'run_report' not in st.session_state:
 col_gen1, col_gen2 = st.columns([1.5, 3.5])
 with col_gen1:
     btn_label = "Generate report" if not st.session_state.run_report else "Update dashboard"
-    if st.button(btn_label, type="primary", use_container_width=True, key="btn_generate_report_control"):
+    if st.button(btn_label, type="primary", width='stretch', key="btn_generate_report_control"):
         ui.invalidate_report()
         st.session_state.run_report = True
         st.session_state.pop('_report_snapshot', None)
@@ -1594,24 +1595,25 @@ def render_total_float_details_view(float_df, default_line="All"):
         cab = df_search.iloc[0]
         st.markdown(f"#### 🎴 Inspector Timeline for BIW #{cab.get('BIW NUMBER')}")
         is_dark = st.session_state.get('theme', '☀️ White Theme') == '🌙 Dark Theme'
-        card_bg = "#1E293B" if is_dark else "#F8FAFC"
-        border_c = "#334155" if is_dark else "#E2E8F0"
+        _t = ui.get_theme_tokens(is_dark)
+        card_bg = _t['bg_elevated']
+        border_c = _t['border']
         
         st.markdown(f"""
         <div style="background-color: {card_bg}; border: 1px solid {border_c}; border-radius: 12px; padding: 1.25rem; margin-bottom: 1.5rem;">
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 1rem;">
-                <div><strong>BIW Number:</strong> <br><span style="font-size: 1.1em; font-weight: bold; color: #3B82F6;">{cab.get('BIW NUMBER', '—')}</span></div>
+                <div><strong>BIW Number:</strong> <br><span style="font-size: 1.1em; font-weight: bold; color: {_t['blue']};">{cab.get('BIW NUMBER', '—')}</span></div>
                 <div><strong>VIN:</strong> <br><span style="font-weight: bold;">{cab.get('VIN', '—')}</span></div>
                 <div><strong>Vehicle Code:</strong> <br><code>{cab.get('VEHICLE CODE', '—')}</code></div>
                 <div><strong>Product / Model:</strong> <br>{cab.get('PRODUCT', '—')} - {cab.get('MODEL', '—')}</div>
                 <div><strong>Colour:</strong> <br>{cab.get('COLOUR', '—')}</div>
                 <div><strong>Shop / Line:</strong> <br><strong>{cab.get('SHOP', '—')}</strong></div>
                 <div><strong>Allocation Status:</strong> <br><span style="font-weight: bold;">{cab.get('Status', '—')}</span></div>
-                <div><strong>Cab Location / Stage:</strong> <br><span style="background-color: #3B82F6; color: white; padding: 3px 8px; border-radius: 6px; font-weight: bold;">{cab.get('Cab location', cab.get('Stage', '—'))}</span></div>
+                <div><strong>Cab Location / Stage:</strong> <br><span style="background-color: {_t['blue']}; color: white; padding: 3px 8px; border-radius: 6px; font-weight: bold;">{cab.get('Cab location', cab.get('Stage', '—'))}</span></div>
             </div>
             <hr style="margin: 1rem 0; border: none; border-top: 1px solid {border_c};">
             <div style="font-size: 13px;">
-                <strong>🛑 Quality Hold Status:</strong> {f"<span style='color: #EF4444; font-weight: bold;'>HOLD BY: {cab.get('HOLD BY')} | Reason: {cab.get('REASONS S')}</span>" if pd.notna(cab.get('HOLD BY')) and str(cab.get('HOLD BY')).strip() not in ['', 'None'] else "<span style='color: #10B981; font-weight: bold;'>✅ CLEAR (No Quality Hold)</span>"}
+                <strong>🛑 Quality Hold Status:</strong> {f"<span style='color: {_t['critical']}; font-weight: bold;'>HOLD BY: {cab.get('HOLD BY')} | Reason: {cab.get('REASONS S')}</span>" if pd.notna(cab.get('HOLD BY')) and str(cab.get('HOLD BY')).strip() not in ['', 'None'] else f"<span style='color: {_t['success']}; font-weight: bold;'>✅ CLEAR (No Quality Hold)</span>"}
             </div>
         </div>
         """, unsafe_allow_html=True)
@@ -1637,9 +1639,9 @@ def render_total_float_details_view(float_df, default_line="All"):
     if 'Status' in display_df.columns:
         # Styler.applymap was removed in pandas 3.0 -- use .map instead.
         styled_display_df = display_df
-        st.dataframe(styled_display_df, use_container_width=True, hide_index=True)
+        st.dataframe(styled_display_df, width='stretch', hide_index=True)
     else:
-        st.dataframe(display_df, use_container_width=True, hide_index=True)
+        st.dataframe(display_df, width='stretch', hide_index=True)
     
     # Export options with colorful OpenPyXL styling and Ready to TCF Short VC Pivot + Blocked Reason Pivot
     import io
@@ -2291,7 +2293,8 @@ def _calculate_summary():
 
 if page == 'Summary & Excel Reports':
     if '_summary_snapshot' not in st.session_state:
-        st.session_state['_summary_snapshot'] = _calculate_summary()
+        with st.spinner('Building plant summary & analytics…'):
+            st.session_state['_summary_snapshot'] = _calculate_summary()
     globals().update(st.session_state['_summary_snapshot'])
     is_dark_theme = st.session_state.theme == '🌙 Dark Theme'
 
@@ -2372,7 +2375,7 @@ if page == 'TCF1 Line':
             
             edited_tcf1 = st.data_editor(
                 filtered_df[display_cols],
-                use_container_width=True,
+                width='stretch',
                 hide_index=True,
                 key="tcf1_queue_editor",
                 column_config={
@@ -2594,7 +2597,7 @@ if page == 'TCF2 Line':
             
             edited_tcf2 = st.data_editor(
                 filtered_df_tcf2[display_cols],
-                use_container_width=True,
+                width='stretch',
                 hide_index=True,
                 key="tcf2_queue_editor",
                 column_config={
@@ -2758,76 +2761,54 @@ if page == 'Quality Holds':
         badge="QUALITY HOLDS",
         is_dark=is_dark_theme
     )
-    
-    # 1. Compute PBS Quality Holds
-    if not pbs_on_hold.empty:
-        pbs_on_hold_cleaned = pbs_on_hold.drop_duplicates(subset=['BIW NUMBER']).sort_values(by=['SHOP', 'PBS LIFT'], ascending=[True, True]).copy()
+
+    def _clean_hold_df(raw_df, sort_col):
+        """Shared cleanup for a quality-hold dataframe: dedupe by BIW, sort,
+        map VC -> Engine -> Model (with the Tayrona/SAFARI EV special case),
+        and normalize the colour column name. Used for both the PBS buffer
+        and Paint Shop hold registries below, since they need identical
+        treatment -- kept as one function so a rule change only has to
+        happen in one place.
+        """
+        if raw_df.empty:
+            return pd.DataFrame()
+        cleaned = raw_df.drop_duplicates(subset=['BIW NUMBER']).sort_values(by=['SHOP', sort_col], ascending=[True, True]).copy()
+
         if bom_df is not None and not bom_df.empty:
             vc_to_engine = dict(zip(bom_df['Short Vehicle Code'].astype(str).str.strip(), bom_df['Engine'].astype(str).str.strip()))
-            short_vcs = pbs_on_hold_cleaned['VEHICLE CODE'].astype(str).str.strip().str[:9]
+            short_vcs = cleaned['VEHICLE CODE'].astype(str).str.strip().str[:9]
             mapped_engines = short_vcs.map(vc_to_engine)
-            pbs_on_hold_cleaned['Model'] = mapped_engines.map(engine_to_model)
+            cleaned['Model'] = mapped_engines.map(engine_to_model)
         else:
-            pbs_on_hold_cleaned['Model'] = pd.Series(dtype='object', index=pbs_on_hold_cleaned.index)
-            
-        if 'PRODUCT' in pbs_on_hold_cleaned.columns:
-            is_tayrona = pbs_on_hold_cleaned['PRODUCT'].astype(str).str.strip().str.upper().str.contains('TAYRONA') | \
-                         pbs_on_hold_cleaned['VEHICLE CODE'].astype(str).str.strip().str.startswith('54831927A')
+            cleaned['Model'] = pd.Series(dtype='object', index=cleaned.index)
+
+        if 'PRODUCT' in cleaned.columns:
+            is_tayrona = cleaned['PRODUCT'].astype(str).str.strip().str.upper().str.contains('TAYRONA') | \
+                         cleaned['VEHICLE CODE'].astype(str).str.strip().str.startswith('54831927A')
         else:
-            is_tayrona = pbs_on_hold_cleaned['VEHICLE CODE'].astype(str).str.strip().str.startswith('54831927A')
-            
-        pbs_on_hold_cleaned['Model'] = np.where(is_tayrona, 'SAFARI EV', pbs_on_hold_cleaned['Model'])
-        pbs_on_hold_cleaned['Model'] = pbs_on_hold_cleaned['Model'].fillna('—')
-            
+            is_tayrona = cleaned['VEHICLE CODE'].astype(str).str.strip().str.startswith('54831927A')
+
+        cleaned['Model'] = np.where(is_tayrona, 'SAFARI EV', cleaned['Model'])
+        cleaned['Model'] = cleaned['Model'].fillna('—')
+
         colour_col = None
-        for col in pbs_on_hold_cleaned.columns:
+        for col in cleaned.columns:
             if str(col).strip().upper() in ['COLOUR', 'COLOR']:
                 colour_col = col
                 break
-        if colour_col:
-            pbs_on_hold_cleaned['Colour'] = pbs_on_hold_cleaned[colour_col].fillna('—')
-        else:
-            pbs_on_hold_cleaned['Colour'] = '—'
-    else:
-        pbs_on_hold_cleaned = pd.DataFrame()
+        cleaned['Colour'] = cleaned[colour_col].fillna('—') if colour_col else '—'
+        return cleaned
 
-    # 2. Compute Paint Shop Quality Holds (from PTCED to before PBS Lift)
+    # 1. PBS Quality Holds
+    pbs_on_hold_cleaned = _clean_hold_df(pbs_on_hold, 'PBS LIFT')
+
+    # 2. Paint Shop Quality Holds (from PTCED to before PBS Lift)
     if float_df is not None and not float_df.empty:
         ps_hold_mask = float_df['PBS LIFT'].isna() & float_df['PTCED'].notna() & float_df['HOLD BY'].notna() & (float_df['HOLD BY'].astype(str).str.strip() != '') & (float_df['HOLD BY'].astype(str).str.strip() != 'nan')
         paintshop_on_hold = float_df[ps_hold_mask].copy()
     else:
         paintshop_on_hold = pd.DataFrame()
-
-    if not paintshop_on_hold.empty:
-        paintshop_on_hold_cleaned = paintshop_on_hold.drop_duplicates(subset=['BIW NUMBER']).sort_values(by=['SHOP', 'PTCED'], ascending=[True, True]).copy()
-        if bom_df is not None and not bom_df.empty:
-            vc_to_engine = dict(zip(bom_df['Short Vehicle Code'].astype(str).str.strip(), bom_df['Engine'].astype(str).str.strip()))
-            short_vcs = paintshop_on_hold_cleaned['VEHICLE CODE'].astype(str).str.strip().str[:9]
-            mapped_engines = short_vcs.map(vc_to_engine)
-            paintshop_on_hold_cleaned['Model'] = mapped_engines.map(engine_to_model)
-        else:
-            paintshop_on_hold_cleaned['Model'] = pd.Series(dtype='object', index=paintshop_on_hold_cleaned.index)
-            
-        if 'PRODUCT' in paintshop_on_hold_cleaned.columns:
-            is_tayrona = paintshop_on_hold_cleaned['PRODUCT'].astype(str).str.strip().str.upper().str.contains('TAYRONA') | \
-                         paintshop_on_hold_cleaned['VEHICLE CODE'].astype(str).str.strip().str.startswith('54831927A')
-        else:
-            is_tayrona = paintshop_on_hold_cleaned['VEHICLE CODE'].astype(str).str.strip().str.startswith('54831927A')
-            
-        paintshop_on_hold_cleaned['Model'] = np.where(is_tayrona, 'SAFARI EV', paintshop_on_hold_cleaned['Model'])
-        paintshop_on_hold_cleaned['Model'] = paintshop_on_hold_cleaned['Model'].fillna('—')
-            
-        colour_col = None
-        for col in paintshop_on_hold_cleaned.columns:
-            if str(col).strip().upper() in ['COLOUR', 'COLOR']:
-                colour_col = col
-                break
-        if colour_col:
-            paintshop_on_hold_cleaned['Colour'] = paintshop_on_hold_cleaned[colour_col].fillna('—')
-        else:
-            paintshop_on_hold_cleaned['Colour'] = '—'
-    else:
-        paintshop_on_hold_cleaned = pd.DataFrame()
+    paintshop_on_hold_cleaned = _clean_hold_df(paintshop_on_hold, 'PTCED')
 
     tot_pbs_h = len(pbs_on_hold_cleaned)
     tot_ps_h = len(paintshop_on_hold_cleaned)
@@ -2849,11 +2830,10 @@ if page == 'Quality Holds':
         display_hold_cols = [col for col in ['BIW NUMBER', 'Model', 'Colour', 'VIN', 'VEHICLE CODE', 'SHOP', 'HOLD BY', 'REASONS S', 'PBS LIFT'] if col in pbs_on_hold_cleaned.columns]
         st.dataframe(
             pbs_on_hold_cleaned[display_hold_cols],
-            use_container_width=True,
+            width='stretch',
             hide_index=True
         )
         
-        import io
         def _build_pbs_holds():
             excel_buffer = io.BytesIO()
             with pd.ExcelWriter(excel_buffer, engine='openpyxl') as writer:
@@ -2873,11 +2853,10 @@ if page == 'Quality Holds':
         display_ps_cols = [col for col in ['BIW NUMBER', 'Model', 'Colour', 'VIN', 'VEHICLE CODE', 'SHOP', 'HOLD BY', 'REASONS S', 'PTCED', 'SEALANT', 'TOPCOAT'] if col in paintshop_on_hold_cleaned.columns]
         st.dataframe(
             paintshop_on_hold_cleaned[display_ps_cols],
-            use_container_width=True,
+            width='stretch',
             hide_index=True
         )
         
-        import io
         def _build_paint_holds():
             excel_buffer_ps = io.BytesIO()
             with pd.ExcelWriter(excel_buffer_ps, engine='openpyxl') as writer:
@@ -2906,7 +2885,7 @@ if page == 'Telegram Dispatcher':
         st.markdown("<div style='height: 8px;'></div>", unsafe_allow_html=True)
         btn_t1, btn_t2 = st.columns(2)
         with btn_t1:
-            if st.button("💾 Save Credentials", type="primary", use_container_width=True, key="save_tg_creds_btn"):
+            if st.button("💾 Save Credentials", type="primary", width='stretch', key="save_tg_creds_btn"):
                 st.session_state.telegram_token = input_token.strip()
                 st.session_state.telegram_chat_id = input_chat_id.strip()
                 try:
@@ -2917,7 +2896,7 @@ if page == 'Telegram Dispatcher':
                 st.toast("💾 Telegram credentials saved to database!", icon="💾")
 
         with btn_t2:
-            if st.button("🧪 Send Test Msg", type="secondary", use_container_width=True, key="test_tg_creds_btn"):
+            if st.button("🧪 Send Test Msg", type="secondary", width='stretch', key="test_tg_creds_btn"):
                 test_msg = "<b>🤖 TML Planner Dashboard Connected!</b>\n\nTelegram Bot integration successfully verified."
                 success, status_lbl = dl.send_telegram_message(input_token.strip(), input_chat_id.strip(), test_msg)
                 if success:
@@ -3003,7 +2982,7 @@ if page == 'Telegram Dispatcher':
                 st.markdown("##### ⚡ Quick Action")
                 st.caption("Send the TCF1 & TCF2 PPC Report, the Nova Status Report, and the Dropping vs. Paint Lifting Status Report together in one tap.")
             with qa_col2:
-                if st.button("🚀 Send ALL 3 Reports Now", type="secondary", use_container_width=True, key="send_all_tg_reports_btn"):
+                if st.button("🚀 Send ALL 3 Reports Now", type="secondary", width='stretch', key="send_all_tg_reports_btn"):
                     ok1, res_msg1 = dl.send_telegram_message(st.session_state.telegram_token, st.session_state.telegram_chat_id, tg_report_1_text)
                     ok2, res_msg2 = dl.send_telegram_message(st.session_state.telegram_token, st.session_state.telegram_chat_id, tg_report_2_text)
                     ok3, res_msg3 = dl.send_telegram_message(st.session_state.telegram_token, st.session_state.telegram_chat_id, tg_report_3_text)
@@ -3033,7 +3012,7 @@ if page == 'Telegram Dispatcher':
             st.markdown("##### 📊 TCF1 & TCF2 PPC Report Preview")
             st.markdown(f"<div style='background: rgba(15, 23, 42, 0.05); border-radius: 8px; padding: 14px; font-family: monospace; font-size: 13px; white-space: pre-wrap; word-break: break-all;'>{tg_report_1_text}</div>", unsafe_allow_html=True)
             st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
-            if st.button("🚀 Send TCF1 & TCF2 Report to Telegram", type="primary", use_container_width=True, key="send_tg_report_1_btn"):
+            if st.button("🚀 Send TCF1 & TCF2 Report to Telegram", type="primary", width='stretch', key="send_tg_report_1_btn"):
                 ok, res_msg = dl.send_telegram_message(st.session_state.telegram_token, st.session_state.telegram_chat_id, tg_report_1_text)
                 if ok:
                     st.toast("🚀 TCF1 & TCF2 Report successfully sent to Telegram!", icon="🚀")
@@ -3045,7 +3024,7 @@ if page == 'Telegram Dispatcher':
             st.markdown("##### ⚡ Punch EV (Nova) Status Report Preview")
             st.markdown(f"<div style='background: rgba(15, 23, 42, 0.05); border-radius: 8px; padding: 14px; font-family: monospace; font-size: 13px; white-space: pre-wrap; word-break: break-all;'>{tg_report_2_text}</div>", unsafe_allow_html=True)
             st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
-            if st.button("🚀 Send Nova Status Report to Telegram", type="primary", use_container_width=True, key="send_tg_report_2_btn"):
+            if st.button("🚀 Send Nova Status Report to Telegram", type="primary", width='stretch', key="send_tg_report_2_btn"):
                 ok, res_msg = dl.send_telegram_message(st.session_state.telegram_token, st.session_state.telegram_chat_id, tg_report_2_text)
                 if ok:
                     st.toast("🚀 Nova Status Report successfully sent to Telegram!", icon="🚀")
@@ -3057,7 +3036,7 @@ if page == 'Telegram Dispatcher':
             st.markdown("##### 🏭 TCF Dropping vs. Paint Lifting Status Report Preview")
             st.markdown(f"<div style='background: rgba(15, 23, 42, 0.05); border-radius: 8px; padding: 14px; font-family: monospace; font-size: 13px; white-space: pre-wrap; word-break: break-all;'>{tg_report_3_text}</div>", unsafe_allow_html=True)
             st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
-            if st.button("🚀 Send Dropping vs. Paint Lifting Report to Telegram", type="primary", use_container_width=True, key="send_tg_report_3_btn"):
+            if st.button("🚀 Send Dropping vs. Paint Lifting Report to Telegram", type="primary", width='stretch', key="send_tg_report_3_btn"):
                 ok, res_msg = dl.send_telegram_message(st.session_state.telegram_token, st.session_state.telegram_chat_id, tg_report_3_text)
                 if ok:
                     st.toast("🚀 Dropping vs. Paint Lifting Report successfully sent to Telegram!", icon="🚀")
@@ -3106,7 +3085,7 @@ if page == 'Telegram Dispatcher':
                 custom_docs = st.file_uploader("Upload Files (Excel, PDF, Images, Documents, etc.)", accept_multiple_files=True, key="custom_tg_doc_uploader")
 
             st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
-            if st.button("🚀 Send Custom Message / Files via Telegram Bot", type="primary", use_container_width=True, key="send_custom_tg_msg_btn"):
+            if st.button("🚀 Send Custom Message / Files via Telegram Bot", type="primary", width='stretch', key="send_custom_tg_msg_btn"):
                 has_text = bool(custom_text and custom_text.strip())
                 has_img = img_bytes_to_send is not None
                 has_docs = bool(custom_docs)
@@ -3654,12 +3633,12 @@ if page == 'Summary & Excel Reports':
                     st.markdown("##### 🟢 TCF1 Line Hourly Dropping Trend")
                     if tcf1_drop_data:
                         chart_tcf1 = _build_attractive_drop_chart(tcf1_drop_data, '#059669')
-                        st.altair_chart(chart_tcf1, use_container_width=True)
+                        st.altair_chart(chart_tcf1, width='stretch')
                 with chart_col2:
                     st.markdown("##### 🟠 TCF2 Line Hourly Dropping Trend")
                     if tcf2_drop_data:
                         chart_tcf2 = _build_attractive_drop_chart(tcf2_drop_data, '#ea580c')
-                        st.altair_chart(chart_tcf2, use_container_width=True)
+                        st.altair_chart(chart_tcf2, width='stretch')
     
             # Excel Export for Hourly Production Tracker
             export_hourly_rows = []
@@ -4016,7 +3995,7 @@ if page == 'Summary & Excel Reports':
                 "with blank/NaN parts until BOM is entered below."
             )
             with st.expander(f"⚠️ Fix Missing/Incomplete BOM — {len(missing_bom_df)} Short VC(s)", expanded=True):
-                st.dataframe(missing_bom_df, use_container_width=True, hide_index=True)
+                st.dataframe(missing_bom_df, width='stretch', hide_index=True)
                 st.markdown("###### ➕ Enter BOM for a Short VC")
                 with st.form("missing_bom_entry_form", clear_on_submit=True):
                     sel_vc = st.selectbox("Short Vehicle Code", options=missing_bom_df['Short VC'].tolist())
